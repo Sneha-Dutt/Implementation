@@ -1,0 +1,82 @@
+#Name of the pipeline
+name: Static Analysis and Testing Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  static-analysis:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the code from the repository
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Install cppcheck
+      - name: Install cppcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cppcheck
+
+      # Run Cppcheck for static analysis and save output to a file
+      - name: Run static analysis with Cppcheck
+        run: |
+          echo "Running static analysis with Cppcheck..."
+          cppcheck --enable=all --inconclusive --quiet \
+            --suppress=missingIncludeSystem \
+            --suppress=missingInclude . 2>&1 | tee cppcheck_report.txt
+
+      # Upload cppcheck report as an artifact
+      - name: Upload cppcheck report
+        uses: actions/upload-artifact@v4
+        with:
+          name: cppcheck-report
+          path: cppcheck_report.txt
+
+  unit-tests:
+    needs: static-analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the code from the repository
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Install dependencies and GoogleTest
+      - name: Install dependencies and GoogleTest
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential g++  # Ensure g++ is installed
+          cd /tmp
+          git clone https://github.com/google/googletest.git
+          cd googletest
+          cmake .
+          sudo make install
+
+      # Build the project and run unit tests with detailed output
+      - name: Build and run unit tests
+        run: |
+          mkdir build
+          cd build
+          cmake ..
+          make VERBOSE=1  # Add verbose output to debug build issues
+          ctest --output-on-failure --output-junit unit_test_report.xml  # Use ctest for test execution
+
+      # Display unit test results for debugging, checking if the file exists first
+      - name: Display unit test results
+        run: |
+            echo "Unit Test Results:"
+            cat build/unit_test_report.xml
+
+      # Upload unit test result logs as artifact
+      - name: Upload unit test log
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report
+          path: build/unit_test_report.xml

@@ -1,0 +1,55 @@
+name: C++ Build and Compile Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  compile:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    # Install dependencies, including GoogleTest
+    - name: Install dependencies and GoogleTest
+      shell: bash
+      run: |
+        echo "Installing dependencies..."
+        choco install -y cmake mingw
+        # Install GoogleTest from source
+        git clone https://github.com/google/googletest.git /tmp/googletest
+        cd /tmp/googletest
+        cmake .
+        cmake --build . --config Release
+
+    # Compile C++ code with GoogleTest
+    - name: Compile C++ code with GoogleTest
+      shell: bash
+      run: |
+        echo "Creating build directory..."
+        mkdir -p build
+        cd build
+        echo "Looking for .cpp files..."
+        SRC_FILES=$(find .. -name "*.cpp")
+        if [ -n "$SRC_FILES" ]; then
+          echo "Compiling C++ code..."
+          g++ -m64 -v -Wall -Wextra -o program.exe $SRC_FILES -lgtest -lgtest_main -pthread > compile_output.log 2>&1
+          echo "Compilation completed. Here is the output:"
+          cat compile_output.log
+        else
+          echo "No .cpp files found. Skipping compilation." > compile_output.log
+        fi
+
+    # Upload compilation logs as artifacts
+    - name: Upload compilation log
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: compilation-log
+        path: build/compile_output.log

@@ -1,0 +1,16 @@
+# Manually specify the path to GoogleTest
+set(GTEST_INCLUDE_DIR "C:/Program Files (x86)/googletest-distribution/include")
+set(GTEST_LIBRARY "C:/Program Files (x86)/googletest-distribution/lib/libgtest.a")  # Use libgtest.lib if on Windows
+set(GTEST_MAIN_LIBRARY "C:/Program Files (x86)/googletest-distribution/lib/libgtest_main.a")  # Use libgtest_main.lib if on Windows
+
+# Locate GoogleTest
+find_package(GTest REQUIRED)
+
+# Add the test source file
+add_executable(sensor_tests testCode.cpp ../cmain.cpp)
+
+# Link the test executable with GoogleTest and pthread
+target_link_libraries(sensor_tests GTest::GTest GTest::Main pthread)
+
+# Register the tests with CTest
+add_test(NAME SensorTests COMMAND sensor_tests)
